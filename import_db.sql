@@ -70,13 +70,19 @@ INSERT INTO
 VALUES
   ('R Title 1',
   'R Body 1',
-  (SELECT id FROM questions WHERE title = 'Title 2'),
-  (SELECT id FROM questions WHERE title = 'Title 2'),
+  NULL,
+  (SELECT id FROM questions WHERE title = 'Title 1'),
   (SELECT id FROM users WHERE fname = 'Albert')),
 
   ('R Title 2',
   'R Body 2',
-  (SELECT id FROM replies WHERE title = 'R Title 1'),
+  NULL,
+  (SELECT id FROM questions WHERE title = 'Title 2'),
+  (SELECT id FROM users WHERE fname = 'Kurt')),
+
+  ('R Title 3',
+  'R Body 3',
+  (SELECT id FROM replies WHERE title = 'R Title 2'),
   (SELECT id FROM questions WHERE title = 'Title 2'),
   (SELECT id FROM users WHERE fname = 'Kurt'));
 
