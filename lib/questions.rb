@@ -49,19 +49,6 @@ class User
     options.values_at("id", "fname", "lname")
   end
 
-  def create
-    raise "already saved!" unless self.id.nil?
-    params = [self.fname, self.lname]
-    QuestionDatabase.instance.execute(<<-SQL, *params)
-      INSERT INTO
-        users (fname, lname)
-      VALUES
-        (?, ?)
-    SQL
-
-    @id = QuestionDatabase.instance.last_insert_row_id
-  end
-
   def authored_questions
     Question.find_by_author_id(self.id)
   end
@@ -107,19 +94,6 @@ class Question
     options.values_at("id", "title", "body", "user_id")
   end
 
-  def create
-    raise "already saved!" unless self.id.nil?
-    params = [self.title, self.body, self.user_id]
-    QuestionDatabase.instance.execute(<<-SQL, *params)
-      INSERT INTO
-        users ("title", "body", "user_id")
-      VALUES
-        (?, ?, ?)
-    SQL
-
-    @id = QuestionDatabase.instance.last_insert_row_id
-  end
-
   def author
     results = QuestionDatabase.instance.execute(<<-SQL, user_id)
       SELECT
@@ -148,6 +122,14 @@ class Question
 
   def followers
     QuestionFollower.followers_for_question_id(id)
+  end
+
+  def likers
+    QuestionLike.likers_for_question_id(id)
+  end
+
+  def num_likes
+    QuestionLike.num_likes_for_question_id(id)
   end
 
 end
@@ -185,19 +167,6 @@ class Reply
   def initialize(options = {})
     @id, @title, @body, @parent_id, @question_id, @user_id =
     options.values_at("id", "title", "body", "parent_id", "question_id", "user_id")
-  end
-
-  def create
-    raise "already saved!" unless self.id.nil?
-    params = [self.title, self.body, self.parent_id, self.question_id, self.user_id]
-    QuestionDatabase.instance.execute(<<-SQL, *params)
-      INSERT INTO
-        users ("title", "body", "parent_id", "question_id", "user_id")
-      VALUES
-        (?, ?, ?, ?, ?)
-    SQL
-
-    @id = QuestionDatabase.instance.last_insert_row_id
   end
 
   def author
@@ -254,6 +223,7 @@ class Reply
 end
 
 class QuestionFollower
+
   def self.followers_for_question_id(question_id)
     results = QuestionDatabase.instance.execute(<<-SQL, question_id)
       SELECT
@@ -283,7 +253,49 @@ class QuestionFollower
 
 end
 
+class QuestionLike
 
+  def self.likers_for_question_id(question_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        *
+      FROM
+        question_likes INNER JOIN users ON (user_id = users.id)
+      WHERE
+        question_id = ?
+    SQL
+
+    results.map { |result| User.new(result) }
+  end
+
+  def self.num_likes_for_question_id(question_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+    COUNT(*)
+      FROM
+        question_likes INNER JOIN users ON (user_id = users.id)
+      WHERE
+        question_id = ?
+    SQL
+
+    results.first["COUNT(*)"]
+  end
+
+  def self.liked_questions_for_user_id(user_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        *
+      FROM
+        questions INNER JOIN question_likes ON (questions.id = question_likes.question_id)
+      INNER JOIN users ON (question_likes.user_id = users.id)
+      WHERE
+        users.id = ?
+    SQL
+
+    results.map { |result| Question.new(result) }
+  end
+
+end
 
 if __FILE__ == $0
   system("rm school.db") if File.exist?("#{Dir.pwd}/school.db")
@@ -300,6 +312,8 @@ if __FILE__ == $0
   reply.child_replies
 
   QuestionFollower.followed_questions_for_user_id(2)
+
+  QuestionLike.num_likes_for_question_id(2)
 
   system("rm school.db")
 end
