@@ -211,6 +211,16 @@ describe QuestionLike do
   end
 
   describe "most_liked_questions(n)" do
-    it "returns n most liked questions"
+    it "returns most liked questions" do
+      expect(QuestionLike.most_liked_questions(1).first.title).to eq("Title 1")
+    end
+
+    it "returns 2 most liked questions" do
+      expect(QuestionLike.most_liked_questions(2)[1].title).to eq("Title 2")
+    end
+
+    it "returns 3 most liked questions" do
+      expect(QuestionLike.most_liked_questions(3)[1].title).to eq("Monkeys")
+    end
   end
 end

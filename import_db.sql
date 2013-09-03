@@ -45,7 +45,8 @@ INSERT INTO
   users(fname, lname)
 VALUES
   ('Albert', 'Einstein'),
-  ('Kurt', 'Godel');
+  ('Kurt', 'Godel'),
+  ('Jane', 'Goodall');
 
 INSERT INTO
   questions(title, body, user_id)
@@ -55,6 +56,13 @@ VALUES
 
   ('Title 2', 'Body 2',
   (SELECT id FROM users WHERE fname = 'Kurt'));
+
+
+INSERT INTO
+  questions(title, body, user_id)
+VALUES
+  ('Monkeys', 'What are they all about?',
+  (SELECT id FROM users WHERE fname = 'Jane'));
 
 INSERT INTO
   question_followers(question_id, user_id)
@@ -97,3 +105,10 @@ VALUES
 
   ((SELECT id FROM questions WHERE title = 'Title 1'),
   (SELECT id FROM users WHERE fname = 'Kurt'));
+
+INSERT INTO
+  question_likes(question_id, user_id)
+  ((SELECT id FROM questions WHERE title = 'Title 1'),
+  (SELECT id FROM users WHERE fname = 'Jane'));
+
+

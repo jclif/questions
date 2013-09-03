@@ -295,6 +295,26 @@ class QuestionLike
     results.map { |result| Question.new(result) }
   end
 
+  def self.most_liked_questions(n)
+    results = QuestionDatabase.instance.execute(<<-SQL)
+    SELECT
+      *, COUNT(question_id)
+    FROM
+      questions
+    LEFT OUTER JOIN
+      question_likes
+    ON
+      (questions.id = question_id)
+    GROUP BY
+      questions.id
+    ORDER BY
+      question_id
+    -- LIMIT ?
+    SQL
+
+    results.map { |result| Question.new(result) }
+  end
+
 end
 
 if __FILE__ == $0
@@ -314,6 +334,8 @@ if __FILE__ == $0
   QuestionFollower.followed_questions_for_user_id(2)
 
   QuestionLike.num_likes_for_question_id(2)
+
+  QuestionLike.most_liked_questions(3)
 
   system("rm school.db")
 end
