@@ -50,7 +50,7 @@ class User
   end
 
   def self.find_by_name(fname, lname)
-    results = QuestionDatabase.instance.execute(<<-SQL, self.fname, self.lname)
+    results = QuestionDatabase.instance.execute(<<-SQL, fname, lname)
       SELECT
         *
       FROM
