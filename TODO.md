@@ -1,3 +1,3 @@
-* medium function
 * hard functions
-* maybe: spec stuff
+* updating/saving records
+* optional: Bonus

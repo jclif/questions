@@ -78,8 +78,11 @@ VALUES
   'R Body 2',
   NULL,
   (SELECT id FROM questions WHERE title = 'Title 2'),
-  (SELECT id FROM users WHERE fname = 'Kurt')),
+  (SELECT id FROM users WHERE fname = 'Kurt'));
 
+INSERT INTO
+  replies(title, body, parent_id, question_id, user_id)
+VALUES
   ('R Title 3',
   'R Body 3',
   (SELECT id FROM replies WHERE title = 'R Title 2'),

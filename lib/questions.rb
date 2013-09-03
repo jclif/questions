@@ -1,4 +1,4 @@
-require 'debugger'; # debugger
+require 'debugger'; debugger
 require 'singleton'
 require 'sqlite3'
 
@@ -22,6 +22,19 @@ end
 
 class User
 
+  def self.find_by_name(fname, lname)
+    results = QuestionDatabase.instance.execute(<<-SQL, fname, lname)
+      SELECT
+        *
+      FROM
+      users
+      WHERE
+        users.fname = ? AND users.lname = ?
+    SQL
+
+    results.map { |result| User.new(result) }
+  end
+
   attr_accessor :id, :fname, :lname
 
   def self.all
@@ -32,16 +45,16 @@ class User
   end
 
   def initialize(options = {})
-    @fname, @lname =
-    options.values_at("fname", "lname")
+    @id, @fname, @lname =
+    options.values_at("id", "fname", "lname")
   end
 
   def create
     raise "already saved!" unless self.id.nil?
-    params = [self.first_name, self.last_name]
+    params = [self.fname, self.lname]
     QuestionDatabase.instance.execute(<<-SQL, *params)
       INSERT INTO
-        users (first_name, last_name)
+        users (fname, lname)
       VALUES
         (?, ?)
     SQL
@@ -49,25 +62,12 @@ class User
     @id = QuestionDatabase.instance.last_insert_row_id
   end
 
-  def self.find_by_name(fname, lname)
-    results = QuestionDatabase.instance.execute(<<-SQL, fname, lname)
-      SELECT
-        *
-      FROM
-      users
-      WHERE
-        users.fname = ? AND users.lname = ?
-    SQL
-  end
-
   def authored_questions
-    results = Question.find_by_author_id(self.id)
-
-    results.map { |result| Question.new(result) }
+    Question.find_by_author_id(self.id)
   end
 
   def authored_replies
-    results = QuestionDatabase.instance.execute(<<-SQL, user_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, id)
       SELECT
         *
       FROM
@@ -79,6 +79,10 @@ class User
     results.map { |result| Reply.new(result) }
   end
 
+  def followed_questions
+    QuestionFollower.followed_questions_for_user_id(id)
+  end
+
 end
 
 class Question
@@ -88,19 +92,19 @@ class Question
       SELECT
         *
       FROM
-      questions
+        questions
       WHERE
         questions.user_id = ?
     SQL
 
-    results.map { |result| User.new(result) }
+    results.map { |result| Question.new(result) }
   end
 
   attr_accessor :id, :title, :body, :user_id
 
   def initialize(options = {})
-    @title, @body, @user_id =
-    options.values_at("title", "body", "user_id")
+    @id, @title, @body, @user_id =
+    options.values_at("id", "title", "body", "user_id")
   end
 
   def create
@@ -123,7 +127,7 @@ class Question
       FROM
       users
       WHERE
-        users.user_id = ?
+        users.id = ?
     SQL
 
     results.map { |result| User.new(result) }
@@ -140,6 +144,10 @@ class Question
     SQL
 
     results.map { |result| Reply.new(result) }
+  end
+
+  def followers
+    QuestionFollower.followers_for_question_id(id)
   end
 
 end
@@ -175,8 +183,8 @@ class Reply
   attr_accessor :id, :title, :body, :parent_id, :question_id, :user_id
 
   def initialize(options = {})
-    @title, @body, @parent_id, @question_id, @user_id =
-    options.values_at("title", "body", "parent_id", "question_id", "user_id")
+    @id, @title, @body, @parent_id, @question_id, @user_id =
+    options.values_at("id", "title", "body", "parent_id", "question_id", "user_id")
   end
 
   def create
@@ -243,4 +251,55 @@ class Reply
 
     results.map { |result| Reply.new(result) }
   end
+end
+
+class QuestionFollower
+  def self.followers_for_question_id(question_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        *
+      FROM
+        question_followers INNER JOIN users ON (user_id = users.id)
+      WHERE
+        question_id = ?
+    SQL
+
+    results.map { |result| User.new(result) }
+  end
+
+  def self.followed_questions_for_user_id(user_id)
+    results = QuestionDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        *
+      FROM
+        questions INNER JOIN question_followers ON (questions.id = question_id)
+        INNER JOIN users ON (question_followers.user_id = users.id)
+      WHERE
+        users.id = ?
+    SQL
+
+    results.map { |result| Question.new(result) }
+  end
+
+end
+
+
+
+if __FILE__ == $0
+  system("rm school.db") if File.exist?("#{Dir.pwd}/school.db")
+  system("cat import_db.sql | sqlite3 school.db")
+
+  albert = User.find_by_name("Albert", "Einstein").first
+  albert.authored_questions
+
+  question = Question.find_by_author_id(1).first
+  question.replies
+
+  reply = Reply.find_by_question_id(2).first
+  reply.parent_reply
+  reply.child_replies
+
+  QuestionFollower.followed_questions_for_user_id(2)
+
+  system("rm school.db")
 end
